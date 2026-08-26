@@ -121,7 +121,28 @@ For data reception, the software utilizes the UART1 receiver. When it reads inco
 
  > [NOTE 1]: By connecting GP8 to GP9, we effectively create a UART loopback, meaning the transmitted data from the TX pin (GP8) is immediately received by the RX pin (GP9). This allows the Pico to both send and receive data in a self-contained loop, which is useful for testing and debugging the UART functionality.
 
- > [NOTE 2]: If you're experiencing random character outputs in your lab exercise, try replacing stdio_init_all() with stdio_usb_init().
+ > [NOTE 2]: Some groups will see occasional strange behaviour in this exercise — characters that go missing, or arrive as something other than what was sent. Others, running the same code on the same hardware, will see nothing wrong at all. Before you start re-seating jumper wires: **the wiring is not the > problem.**
+
+## **A Deliberate Intermittent Fault**
+
+There is a fault in the setup you have just built. It is not a typo and it is not a mistake in your wiring. It is a design decision inherited from the sample code, and it is the kind of fault that reaches customers — because it passes testing on the bench and fails in the field.
+
+The symptom is **data loss**, not corruption. Nothing reports an error. Nothing crashes. Characters simply do not arrive, and how often that happens depends on how fast the sender transmits and on which laptop you are using. Two groups running identical code will get different results, which is exactly why this class of fault is so expensive to find late.
+
+**Your first job is to make it happen on demand.** An intermittent fault is not debuggable; a reproducible one is ordinary work. Take the transmitting board and change nothing except the rate at which it sends. Send one character per second, then ten, then as fast as the loop will go, and record what the receiver prints at each rate. Somewhere in that range the behaviour changes. Find that boundary before you form any theory — **a fault with a boundary is a fault with an explanation.**
+
+**Your second job is to explain the mechanism.** Not "it drops characters" — that is the symptom you started with. Say precisely what the receiver is doing at the moment a character is lost, why it cannot attend to the incoming data during that time, and what hardware is supposed to be covering the gap. Work out how much time that hardware actually buys you, in microseconds, at 115200 baud. The Raspberry Pi Pico C/C++ SDK documentation and the RP2040 datasheet's UART chapter have everything you need.
+
+**Your third job is to propose fixes — plural.** There are at least five ways to address this, and they are genuinely different in character rather than being the same fix written five ways. Some remove the conflict, some increase the margin, some only make the fault rarer, and at least one does nothing about the loss but ensures you are told when it happens. For each fix you propose, state: 
+- what it costs (pins, memory, CPU time, complexity),
+- whether it eliminates the fault or merely reduces its probability,
+- and whether it would still hold if the data rate were increased tenfold.
+
+That last question is the one that separates a fix from a workaround. A change that makes a fault rarer has not fixed it — it has made it someone else's problem, six months from now, on a system nobody remembers building. 
+
+Use the method in [BUGHUNT.md](../BUGHUNT.md), and record your reasoning as you go. You will meet this same fault again, in a harder form, in Bug Hunt #5.
+
+[//]: # If you're experiencing random character outputs in your lab exercise, try replacing stdio_init_all() with stdio_usb_init().
 
 
 ## Challenge Yourself: Bitwise LED Challenge on Pico
