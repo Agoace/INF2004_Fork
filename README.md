@@ -11,7 +11,7 @@ This repository contains all the labs for the INF2004 module, consolidated into 
 - [LAB 5: FreeRTOS & Sensor Filtering Algorithm](./LAB5/)
 - [LAB 6: OPTIMISATION & DEBUGGING](./LAB6/)
 - [GUIDE: Device Driver Development](./GUIDE_DeviceDriver/)
-- [THE BUG HUNTS: A Debugging Method](./BUGHUNT.md)
+- [GUIDE: The Bug Hunts - A Debugging Method](./BUGHUNT.md)
 
 ## Lab Descriptions
 
