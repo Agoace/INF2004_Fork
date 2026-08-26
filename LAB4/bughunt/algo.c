@@ -27,5 +27,5 @@ uint32_t iir_step(unsigned ch, uint32_t x)
 
 uint16_t pwm_wrap_for_hz(uint32_t hz, float clk_div)
 {
-    return (uint16_t)(SYS_CLK_HZ / clk_div / hz);
+    return (uint16_t)(ALGO_SYS_CLK_HZ / clk_div / hz);
 }

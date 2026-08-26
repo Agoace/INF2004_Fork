@@ -18,3 +18,19 @@ pico_enable_stdio_usb(bughunt1 1)
 pico_enable_stdio_uart(bughunt1 0)
 
 pico_add_extra_outputs(bughunt1)
+
+# --------------------------------------------------------------------
+# The Pico SDK does not enable compiler warnings by default. Several of
+# the planted defects in this hunt are reported ONLY as warnings, so the
+# briefs would be asking you to read messages that are never emitted.
+#
+#   -Wextra is needed as well as -Wall: the "unsigned value compared
+#   against < 0" defect is -Wtype-limits, which -Wall alone does not
+#   include.
+#
+#   -Wno-unused-parameter suppresses noise from SDK callback signatures
+#   that must take arguments they do not use. That noise is not a
+#   planted defect.
+# --------------------------------------------------------------------
+target_compile_options(bughunt1 PRIVATE -Wall -Wextra -Wno-unused-parameter)
+

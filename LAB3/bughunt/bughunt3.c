@@ -13,7 +13,8 @@
  * Eight defects are planted. This file COMPILES (with warnings - read them).
  * Building it is not the exercise; making it behave is.
  *
- * You must build this at BOTH -O0 and -O2 before you change anything.
+ * You must build this at BOTH -O0 (Debug) and -O3 (Release) before you
+ * change anything.
  */
 
 #include <stdio.h>

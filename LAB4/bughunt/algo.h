@@ -38,7 +38,7 @@
 #define VREF_MV      3300u
 #define ALPHA_SHIFT  4u
 #define NUM_CHANNELS 2u
-#define SYS_CLK_HZ   125000000u
+#define ALGO_SYS_CLK_HZ   125000000u
 
 uint16_t adc_to_mv(uint16_t raw);
 uint16_t duty_from_adc(uint16_t raw, uint16_t wrap);

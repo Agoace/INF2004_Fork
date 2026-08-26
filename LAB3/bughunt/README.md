@@ -21,7 +21,7 @@
 `bughunt3.c` is a wheel-encoder driver: count slots, measure how long each slot
 took, debounce the noisy optical edge, report the speed.
 
-It compiles. Read the compiler warnings anyway — **one of the eight defects is
+It compiles. Read the compiler warnings anyway — **two of the eight defects are
 sitting in them**, and this is the last hunt where I will remind you.
 
 ---
@@ -53,10 +53,34 @@ arm-none-eabi-objdump -d build-release/bughunt3.elf > release.asm
 arm-none-eabi-objdump -d build-debug/bughunt3.elf   > debug.asm
 ```
 
-Find `main` in both files. Locate the loop that waits for `pulse_count`. In one
-of them, the loop body contains a load from memory on every iteration. In the
-other, **it does not** — the value is fetched once, before the loop, and the loop
-spins on a register forever.
+Find `main` in both files. Locate the loop that waits for `pulse_count`.
+
+In the **Debug** build the value is reloaded from memory on every pass:
+
+```
+100003f8:  ldr   r3, [r3, #0]     <- read pulse_count
+100003fc:  cmp   r3, #19
+100003fe:  bls.n 100003f8         <- go back and read it again
+```
+
+In the **Release** build the load happens exactly once, before the loop, and
+what is left behind is a single instruction that branches to its own address:
+
+```
+100003de:  ldr   r3, [r6, #0]     <- read pulse_count, once
+100003e0:  cmp   r3, #19
+100003e2:  bhi.n 100003e6         <- leave, if it is already big enough
+100003e4:  b.n   100003e4         <- this is the entire wait loop
+```
+
+Look at that last instruction until it bothers you. `100003e4` branches to
+`100003e4`. The compiler did not merely move the load outside the loop — having
+satisfied itself that `pulse_count` cannot change, it reasoned that if the
+condition is false when you arrive it will be false forever, and emitted an
+unconditional jump to itself. Your twenty-slot wait has been compiled into two
+bytes of machine code that can never, under any circumstances, terminate.
+
+Your addresses will differ from these. The shape will not.
 
 Paste both loops into your logbook. That is the evidence you are handing in.
 
@@ -175,9 +199,10 @@ The eight defects, by area, so you know where to keep looking:
 | Interrupt edge configuration | 1 | logical |
 | The final report in `main` | 1 | undefined behaviour |
 
-If you have found six and cannot place the last two: one of them the compiler
-already told you about, and one of them is not visible at all until you ask what
-happens on the *second* revolution of the wheel at speed.
+If you have found six and cannot place the last two: **two of these the compiler
+already told you about** (build with the warnings on and read them), and one is
+not visible at all until you ask what happens on the *second* revolution of the
+wheel at speed.
 </details>
 
 ---

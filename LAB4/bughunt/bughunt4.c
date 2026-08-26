@@ -17,7 +17,6 @@
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 #include "hardware/adc.h"
-#include "hardware/clocks.h"
 #include "algo.h"
 
 #define PWM_PIN     0
