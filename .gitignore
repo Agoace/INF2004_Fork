@@ -12,3 +12,7 @@ build-release/
 *.hex
 *.map
 *.dis
+
+# Internal review notes. Not published: KIV.md contains the answer to
+# the LAB2 "Deliberate Intermittent Fault" exercise.
+KIV.md
