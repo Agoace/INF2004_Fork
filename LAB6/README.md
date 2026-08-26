@@ -234,3 +234,39 @@ for i = 0 to num_iterations - 1:
 
 ## Additional Resources
 [Raspberry Pi Pico SDK Documentation](https://www.raspberrypi.com/documentation/pico-sdk/index_doxygen.html)
+
+---
+
+## **BUG HUNT #6 — Only the disassembly tells the truth**
+
+The last [Bug Hunt](../BUGHUNT.md), and the reason for the previous five. The
+algorithms are a **CRC-8 table generator, an LFSR, and a frame parser**.
+
+**Twelve defects** are planted, and every instrument you have relied on so far is
+either useless here or actively misleading. One variable is corrupted by code
+that never mentions it. One line of C is a perfectly legal instruction on your
+laptop and an illegal one on a Cortex-M0+. Two defects are invisible at `-O0` and
+fatal at `-O3`. `printf` changes the answer, because one of the defects reads
+whatever the stack happened to contain.
+
+Five builds of identical source — host `-O0`, host `-O2`, host with a sanitiser,
+Pico Debug, Pico Release — produce five different behaviours. All five are
+correct behaviour for the code as written. That is the final lesson.
+
+Three exercises are required, and they are what this lab's debugger is for:
+
+- **Find a memory corruption with a data watchpoint.** An entire class of bug is
+  unfindable without one and takes about ninety seconds with one.
+- **Decode a HardFault.** Recover the stacked `PC`, find the faulting
+  instruction, and explain why *this* processor refuses it.
+- **Prove an optimisation defect from the disassembly** — show what the compiler
+  removed, and why it was entitled to.
+
+Then, and only then, open [`pid.c`](pid.c) and do the exercise below. It is now
+the last debugging task of the semester rather than the first, and you should
+find it dramatically easier than you would have in week one. That difference is
+the whole point.
+
+There is no guidance in this hunt at all.
+
+> **Start here:** [`bughunt/`](bughunt/) · **Method:** [`../BUGHUNT.md`](../BUGHUNT.md)

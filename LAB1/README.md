@@ -271,3 +271,25 @@ This [blinky code](blinky.c) is supposed to blink an LED connected to the GPIO p
 > [!IMPORTANT]
 > Include a printf statement to monitor the variable "a". You might need to modify the CMake file to allow printf to work on the blink example. Refer to the CMake file in the Hello_World example for insights into this.
 
+---
+
+## **BUG HUNT #1 — Bits that lie about themselves**
+
+Attached to this lab is the first of six **Bug Hunts**: a small piece of real
+firmware with defects already planted in it, and your job is to find them.
+
+You have been taught to *write* code. Almost nobody is taught to *debug* it — and
+in embedded work there is no operating system to catch your mistakes, no
+`print` you can trust inside an interrupt, and a fault that appears once an hour
+is still a fault that will ship.
+
+This week's algorithm is **bit counting and bit manipulation** — the code that
+sits at the bottom of every GPIO driver. **Six defects** are planted: three that
+stop it compiling, two that let it compile and give the wrong answer, and one
+that is undefined behaviour.
+
+Hunt #1 is heavily guided. It walks you through the first defect from start to
+finish and gives you a hint for every remaining one. The guidance drops at every
+rung; by Hunt #6 you get a specification, a number, and nothing else.
+
+> **Start here:** [`bughunt/`](bughunt/) · **Method:** [`../BUGHUNT.md`](../BUGHUNT.md)

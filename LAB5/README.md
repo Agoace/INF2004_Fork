@@ -254,3 +254,30 @@ I have attached the [modified version of the ping code](https://github.com/sirfo
 ## **EXERCISE**
 
 Develop an application using FreeRTOS that contains a task that reads the temperature data from the RP2040's built-in temperature sensor and sends it to two tasks every 1 second. The **second task** will perform a moving average on a buffer of ten data points, and the **third task** will perform a simple averaging. Additionally, create a **fourth task** exclusively for executing all the `printf` statements. No `printf` statements are allowed in any other task.
+
+---
+
+## **BUG HUNT #5 — It failed once, an hour in**
+
+The fifth [Bug Hunt](../BUGHUNT.md), and the first that cannot be solved by
+reading the source. The architecture is the one from the exercise above — sensor
+task, moving average, running mean, and a print-only task — wired through a
+shared ring buffer.
+
+**Nine defects** are planted. The program runs. Output appears. The numbers look
+plausible. That is the entire difficulty: **nothing announces itself.** Five of
+the nine are Heisenbugs that depend on load, priority or tick rate, and one of
+them corrupts memory in a task you had not suspected, minutes before anything
+visible goes wrong.
+
+You will not `printf` your way to these — `printf` is one of the things
+perturbing the system. Instead you turn on the kernel's own reporting
+(`configASSERT`, stack-overflow hooks, high-water marks) and let the operating
+system tell you what it already knows.
+
+Two techniques carry this hunt: **make an intermittent fault frequent before you
+try to fix it**, and **change one scheduler knob at a time**.
+
+Guidance is minimal: the specification, the count, and a single pointer.
+
+> **Start here:** [`bughunt/`](bughunt/) · **Method:** [`../BUGHUNT.md`](../BUGHUNT.md)

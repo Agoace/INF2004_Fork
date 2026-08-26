@@ -273,3 +273,27 @@ Again, we can re-use the adc_console code to demonstrate how ADC can be used to 
 To configure a PWM signal at 20 Hz with a 50% duty cycle on GP0 and feed it into an ADC at GP26 while sampling the ADC every 25 ms, you must use the Raspberry Pi Pico and its Pico C SDK. You will need to use a jumper wire to connect GP0 to GP26. You may use a timer interrupt. The output to look as follows:
 
 <img src="/img/ex4.png" width=100% height=100%>
+
+---
+
+## **BUG HUNT #4 — The maths is right on paper**
+
+The fourth [Bug Hunt](../BUGHUNT.md). The algorithm is the **signal chain** this
+lab is built on: ADC counts scaled to millivolts, smoothed by a fixed-point
+first-order filter, mapped onto a PWM duty cycle.
+
+**Eight defects** are planted, and not one of them is a typo. Every one is a
+piece of arithmetic that a competent person wrote while thinking carefully about
+the maths and not at all about the *types*. The filter tracks perfectly upward
+and cannot come back down. The duty cycle is zero across the entire input range
+except at exactly one code.
+
+The technique this week is **synthetic inputs**: stop debugging against a live
+sensor, whose signal is noisy, unrepeatable and whose correct output you do not
+independently know. Feed the algorithm a step whose response you can sketch on
+paper first, and the fault becomes unmissable in two seconds.
+
+Guidance is now low — the specification, the symptom, and one new technique. No
+hints, no questions list. You already own the method.
+
+> **Start here:** [`bughunt/`](bughunt/) · **Method:** [`../BUGHUNT.md`](../BUGHUNT.md)

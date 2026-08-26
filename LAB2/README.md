@@ -134,3 +134,26 @@ Button A: Each press shifts the LED pattern left (<<) so the next LED lights up.
 Button B: Each press toggles (^) the rightmost LED ON/OFF without affecting the others.
 
 Use bitwise operators (|, &, ^, ~, <<, >>) to update and display the LED states.
+
+---
+
+## **BUG HUNT #2 — The frame that arrives wrong**
+
+The second [Bug Hunt](../BUGHUNT.md). This week's algorithm is **serialisation
+and framing**: flattening a sensor reading into bytes, pushing it down UART1 to
+your partner's Pico, and rebuilding it on the far side. Same wiring as the paired
+UART task above — the payload is now a struct rather than a character.
+
+**Seven defects** are planted. Five are in the codec and your laptop will find
+them in one second; the other two exist only on a real UART link between two
+boards.
+
+This is the first hunt where **the defect is not where the symptom is**. The
+receiver prints nonsense, and most of the causes are in the transmitter. The
+technique that cracks it — hex-dump at both ends and diff the bytes — is the one
+you will use for every wire protocol you ever touch.
+
+Guidance steps down from Hunt #1: you still get a worked technique, but the hints
+are now grouped by *area*, and there are fewer hints than there are defects.
+
+> **Start here:** [`bughunt/`](bughunt/) · **Method:** [`../BUGHUNT.md`](../BUGHUNT.md)

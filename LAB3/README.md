@@ -108,3 +108,29 @@ The following [example](https://github.com/KleistRobotics/Pico-Ultrasonic/blob/m
 ## **EXERCISE**
 
 The objective is to develop a simple stopwatch application. The stopwatch will be controlled by a single button on **GP21**. **Pressing and holding** this button starts the timer, and the elapsed time in seconds will be continuously displayed on the Serial Monitor. **Releasing** the button stops the timer and resets the displayed time to zero. To ensure a smooth user experience and accurate timekeeping, the **GP21** button input will be **debounced**, and **timer interrupts** must be employed.
+
+---
+
+## **BUG HUNT #3 — Works in Debug, hangs in Release**
+
+The third [Bug Hunt](../BUGHUNT.md), and the one where debugging stops being
+straightforward. The algorithm is the **wheel-encoder driver** from this lab,
+built out into a proper edge state machine with debounce and pulse-width timing.
+
+**Eight defects** are planted. Four are ordinary logic errors. Three are
+**Heisenbugs** — faults that change or disappear when you try to observe them,
+because your instrument is disturbing the very timing you are measuring. One of
+them is caused by the `printf` you added to find it.
+
+Two things happen for the first time in this hunt:
+
+- **The build configuration is part of the bug.** You will compile identical
+  source at `-O0` and `-O2`, find that only one of them works, and prove why from
+  the disassembly.
+- **`printf` becomes a liability.** You will learn to probe an ISR with a GPIO
+  pin — about 30 nanoseconds — instead of a serial write that costs milliseconds.
+
+Guidance drops again: instead of hints you get a list of **questions to ask the
+code**, and one sealed hint for use after thirty minutes of genuine effort.
+
+> **Start here:** [`bughunt/`](bughunt/) · **Method:** [`../BUGHUNT.md`](../BUGHUNT.md)
