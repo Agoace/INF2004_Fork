@@ -216,7 +216,7 @@ Ensure you select the right application when starting Visual Studio Code, as two
 
 Once "Pico - Visual Studio Code" (VSCode) is started, click the [CMake](/img/cmake.png) icon and select the sample code you want to work on. In this example, we will use the [Hello World](https://github.com/raspberrypi/pico-examples/tree/master/hello_world/usb) example. The following [video](https://www.youtube.com/watch?v=NPwoflT_bB0) demonstrates how you get started with VSCode. Note that we are using the hello_usb version of the code. This allows the USB connection between the pico and the PC/laptop to become a virtual UART connection, which can be used together with printf (for debugging purposes).
 
-Now, try to compile and run the [blink](https://github.com/raspberrypi/pico-examples/tree/master/blink) example.
+Now, try to compile and run the [blink]([https://github.com/raspberrypi/pico-examples/tree/master/blink](https://github.com/raspberrypi/pico-examples/tree/master/pico_w/wifi/blink)) example.
 
 If you are using the Pico W boards, you must make a small amendment to the CMakeLists.txt file. Include "set(PICO_BOARD pico_w)" to line #11. The following [video](https://www.youtube.com/watch?v=sTNtLkoHN58) demonstrates how to make the changes and build a [blink](https://github.com/raspberrypi/pico-examples/tree/master/pico_w/wifi/blink) example for the Pico W. 
 
