@@ -63,32 +63,46 @@ void main_task(__unused void *params) {
 
     while(true) {
         // not much to do as LED is in another task, and we're using RAW (callback) lwIP API
-        vTaskDelay(100);
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 
     cyw43_arch_deinit();
 }
 
-/* A Task that blinks the LED for 3000 ticks continuously */
+/* A Task that blinks the LED with a 3-second half-period.
+ *
+ * Note pdMS_TO_TICKS(): vTaskDelay() counts TICKS, not milliseconds. Writing
+ * the delay in milliseconds and converting at compile time keeps this correct
+ * if configTICK_RATE_HZ ever changes. See PART 1 of the README. */
 void led_task(__unused void *params) {
     while(true) {
-        vTaskDelay(3000);
+        vTaskDelay(pdMS_TO_TICKS(3000));
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-        vTaskDelay(3000);
+        vTaskDelay(pdMS_TO_TICKS(3000));
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
     }
 }
 
-/* A Task that obtains the data every 1000 ticks from the inbuilt temperature sensor (RP2040), prints it out and sends it to avg_task via message buffer */
+/* A Task that samples the inbuilt temperature sensor (RP2040) once per second,
+ * prints it out and sends it to avg_task via the message buffer.
+ *
+ * xTaskDelayUntil() rather than vTaskDelay(): vTaskDelay() waits a period
+ * measured from the moment it is CALLED, so the execution time of the loop body
+ * is added to every period and the error accumulates without bound.
+ * xTaskDelayUntil() wakes at a fixed cadence instead. See PART 2 of the README. */
 void temp_task(__unused void *params) {
     float temperature = 0.0;
+    TickType_t xLastWakeTime;
+    const TickType_t xPeriod = pdMS_TO_TICKS(1000);
 
     adc_init();
     adc_set_temp_sensor_enabled(true);
     adc_select_input(4);
 
+    xLastWakeTime = xTaskGetTickCount();   // initialise ONCE, before the loop
+
     while(true) {
-        vTaskDelay(1000);
+        xTaskDelayUntil(&xLastWakeTime, xPeriod);
         temperature = read_onboard_temperature();
         printf("Onboard temperature = %.02f C\n", temperature);
         xMessageBufferSend( 
@@ -105,6 +119,10 @@ void avg_task(__unused void *params) {
     float sum = 0;
     size_t xReceivedBytes;
     
+    /* These are static, so there is ONE copy shared by every caller of this
+     * function. That is safe here only because exactly one task ever calls it.
+     * Create a second task from this same function and both share one filter
+     * state. See the reentrancy note in PART 3 of the README - and Bug Hunt #5. */
     static float data[4] = {0};
     static int index = 0;
     static int count = 0;

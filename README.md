@@ -8,7 +8,7 @@ This repository contains all the labs for the INF2004 module, consolidated into 
 - [LAB 2: GPIO and Digital Communication](./LAB2/)
 - [LAB 3: Interrupts & Timers](./LAB3/)
 - [LAB 4: PWM & ADCs](./LAB4/)
-- [LAB 5: FreeRTOS & Sensor Filtering Algorithm](./LAB5/)
+- [LAB 5: FreeRTOS & Real-Time Concepts](./LAB5/)
 - [LAB 6: OPTIMISATION & DEBUGGING](./LAB6/)
 - [GUIDE: Device Driver Development](./GUIDE_DeviceDriver/)
 - [THE BUG HUNTS: A Debugging Method](./BUGHUNT.md)
@@ -27,8 +27,8 @@ Explore the differences between polling and interrupts, and learn how to configu
 ### [LAB 4: PWM & ADCs](./LAB4/)
 Configure and implement Pulse Width Modulation (PWM) and Analog-to-Digital Converters (ADC) on the Raspberry Pi Pico.
 
-### [LAB 5: FreeRTOS & Sensor Filtering Algorithm](./LAB5/)
-Configure and implement FreeRTOS on the Raspberry Pi Pico, utilising features such as Task Creation and Message Buffers, and implement a sensor filtering algorithm.
+### [LAB 5: FreeRTOS & Real-Time Concepts](./LAB5/)
+Configure and implement FreeRTOS on the Raspberry Pi Pico: task states and the preemptive scheduler, periodic tasks without drift, inter-task communication with message buffers and queues, mutual exclusion and priority inversion, deferred interrupt handling, and a sensor filtering algorithm.
 
 ### [LAB 6: Optimisation & Debugging](./LAB6/)
 Implement various code optimisation methods and configure/use a debugger for the Raspberry Pi Pico to effectively troubleshoot embedded applications.
