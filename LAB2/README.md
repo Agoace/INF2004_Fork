@@ -49,6 +49,9 @@ The modified code, [picow_blink_button](picow_blink_button.c), configures GP20 a
 
 However, if the button circuitry is supposed to be active-high, then the GPIO pin must be configured to a pull-down mode.
 
+> [!NOTE]
+> Notice that the code calls `gpio_init(BTN_PIN)` before setting the direction and the pulls. Try deleting that line: the program still works. It works because the RP2040 happens to reset the pad's input-enable bit to 1, and because `gpio_set_pulls()` writes the pad register whether or not the pin has been claimed by SIO. **Relying on reset defaults is how you write code that works on your board and fails on the next revision of the hardware.** Initialise every pin you use, every time — this is the first of several habits in this module that cost one line and save one evening.
+
 The images below illustrate how a pull-up configuration would be used as a GP20 button on the Pico W.
 
 ![Screenshot of Pull-up NOT Pressed](img/pullup_notpress2.png)
@@ -57,7 +60,12 @@ The images below illustrate how a pull-up configuration would be used as a GP20 
 
 ## **GPIO - OUTPUT** 
 
-This [code](pulse.c) demonstrates generating a custom signal using a GPIO pin on a Raspberry Pi Pico. The GPIO pin connected to an LED is programmed to create a bespoke pulse by turning the LED on for 1 second (representing a "high" signal) and then turning it off for 2 seconds (representing a "low" signal). This is then repeated using the while loop. Various pulses can be generates using this method.
+This [code](pulse.c) demonstrates generating a custom signal on a GPIO pin. `GP15` is driven high for 1 second (a "high" signal) and low for 2 seconds (a "low" signal), repeating forever. Various pulse shapes can be generated this way by changing the two delays.
+
+**Wiring:** `GP15` → 330 Ω resistor → LED anode; LED cathode → `GND`. The same LED you wired in Lab 1.
+
+> [!IMPORTANT]
+> This example drives a **real GPIO pin**, not the on-board LED. On the Pico W the on-board LED is connected to the WiFi chip, so `cyw43_arch_gpio_put()` is an SPI transaction to the CYW43 — it takes microseconds, not nanoseconds, and its timing is not GPIO timing. You cannot put a scope probe on it either. If you want to *see* the signal you have just described, it has to come out of a pin. Put a probe on GP15 and confirm the 1 s / 2 s pulse train is really there.
 
 ![Screenshot of Pull-up Pressed](img/gpio_output.png)
 
@@ -121,7 +129,7 @@ For data reception, the software utilizes the UART1 receiver. When it reads inco
 
  > [NOTE 1]: By connecting GP8 to GP9, we effectively create a UART loopback, meaning the transmitted data from the TX pin (GP8) is immediately received by the RX pin (GP9). This allows the Pico to both send and receive data in a self-contained loop, which is useful for testing and debugging the UART functionality.
 
- > [NOTE 2]: Some groups will see occasional strange behaviour in this exercise — characters that go missing, or arrive as something other than what was sent. Others, running the same code on the same hardware, will see nothing wrong at all. Before you start re-seating jumper wires: **the wiring is not the > problem.**
+ > [NOTE 2]: Some groups will see occasional strange behaviour in this exercise — characters that go missing, or arrive as something other than what was sent. Others, running the same code on the same hardware, will see nothing wrong at all. Before you start re-seating jumper wires: **the wiring is not the problem.**
 
 ## **A Deliberate Intermittent Fault**
 
@@ -140,10 +148,30 @@ The symptom is **data loss**, not corruption. Nothing reports an error. Nothing 
 
 That last question is the one that separates a fix from a workaround. A change that makes a fault rarer has not fixed it — it has made it someone else's problem, six months from now, on a system nobody remembers building. 
 
-Use the method in [BUGHUNT.md](../BUGHUNT.md), and record your reasoning as you go. You will meet this same fault again, in a harder form, in Bug Hunt #5.
+> Use the method in [BUGHUNT.md](../BUGHUNT.md), and record your reasoning as you
+> go. You will meet this same fault again, in a harder form, in Bug Hunt #5.
 
-[//]: # If you're experiencing random character outputs in your lab exercise, try replacing stdio_init_all() with stdio_usb_init().
 
+## Challenge: The command that arrives as text
+
+Bug Hunt #2 below puts a sensor reading on the wire as **bytes**. This challenge
+puts commands on the same wire as **text** — `SET LED 2 ON\r\n` — and asks you to
+parse them on a microcontroller with no operating system underneath you.
+
+Modems take AT commands, GPS receivers emit NMEA sentences, test equipment
+speaks SCPI. All of them are lines of ASCII arriving one character at a time
+from a sender who may be badly behaved. Writing a parser that survives that is
+ordinary embedded work, and it is the one skill this module has so far only
+asked you to do a single character at a time.
+
+Three rules, and they are what make this an embedded exercise rather than a
+first-year C exercise: **no `malloc`**, **no `strtok()`**, and **tokenise in
+place** — write NULs over the separators in the caller's buffer and hand back
+pointers into it. A host test harness with sixty-odd golden vectors is provided,
+so you can get it right on your laptop in seconds rather than on hardware in
+hours.
+
+> **Start here:** [`cmdparse/`](cmdparse/)
 
 ## Challenge Yourself: Bitwise LED Challenge on Pico
 
