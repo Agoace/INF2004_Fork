@@ -33,7 +33,15 @@ That ends here.
 
 **Task A, before you change a single character of source:**
 
-Build the *identical, unmodified* source twice, into two separate directories:
+First, **predict**. Read `bughunt3.c` and write down in your logbook what you
+expect each build to do — before you build either of them. You have been doing
+this since Lab 1's operator exercise, and this is the week it starts paying:
+the whole point of what follows is that one of your two predictions is wrong,
+and the gap between what you expected and what happens is the bug. A prediction
+written down afterwards is not a prediction.
+
+Now build the *identical, unmodified* source twice, into two separate
+directories:
 
 ```bash
 mkdir build-debug && cd build-debug
