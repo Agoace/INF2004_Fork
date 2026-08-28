@@ -216,7 +216,7 @@ Ensure you select the right application when starting Visual Studio Code, as two
 
 Once "Pico - Visual Studio Code" (VSCode) is started, click the [CMake](/img/cmake.png) icon and select the sample code you want to work on. In this example, we will use the [Hello World](https://github.com/raspberrypi/pico-examples/tree/master/hello_world/usb) example. The following [video](https://www.youtube.com/watch?v=NPwoflT_bB0) demonstrates how you get started with VSCode. Note that we are using the hello_usb version of the code. This allows the USB connection between the pico and the PC/laptop to become a virtual UART connection, which can be used together with printf (for debugging purposes).
 
-Now, try to compile and run the [blink]([https://github.com/raspberrypi/pico-examples/tree/master/blink](https://github.com/raspberrypi/pico-examples/tree/master/pico_w/wifi/blink)) example.
+Now, try to compile and run the [blink](https://github.com/raspberrypi/pico-examples/tree/master/pico_w/wifi/blink) example.
 
 If you are using the Pico W boards, you must make a small amendment to the CMakeLists.txt file. Include "set(PICO_BOARD pico_w)" to line #11. The following [video](https://www.youtube.com/watch?v=sTNtLkoHN58) demonstrates how to make the changes and build a [blink](https://github.com/raspberrypi/pico-examples/tree/master/pico_w/wifi/blink) example for the Pico W. 
 
@@ -260,16 +260,77 @@ The figure below illustrates the entire procedure.
 <img width="1946" height="1071" alt="image" src="https://github.com/user-attachments/assets/22ae2238-e2c2-44bd-8dfe-8d28bafa4e48" />
 
 
-## **TASK**
+## **TASK — Predict, then run**
 
-In this [basic code](basic.c) example, we embark on a journey to understand various types of operators in the C programming language. By executing this code, we gain insights into arithmetic, relational, logical, and bitwise operators, each playing a distinct role in manipulating and evaluating data.
+The [basic code](basic.c) example exercises every family of operator in C:
+arithmetic, relational, logical, increment/decrement, assignment, the ternary
+conditional, and bitwise. Running it and reading the output teaches you very
+little, because everything the program prints will look reasonable after the
+fact. So do it the other way round.
 
-## **EXERCISE**
+**Before you build anything**, open `basic.c` and write down — on paper, or in a
+text file — the *exact* line that each `printf` will produce. Work through the
+whole program, but be especially careful with these four:
 
-This [blinky code](blinky.c) is supposed to blink an LED connected to the GPIO pin. The LED blinks at a rate determined by the "a" variable, which starts at 1 ms and __doubles__ with each iteration of the loop. When variable "a" reaches 2048ms, it resets to 1, creating an odd repeating LED blink pattern. The LED blink pattern must turn on and off with the same delay at __each loop iteration__. Could you identify where the errors are and make the necessary changes so that the code works as intended?
+| Block | What to work out |
+|---|---|
+| `b / a` and `b % a` | Both operands are `int`. What type is the result, and what happens to any fractional part? |
+| `c++` vs `++c` | Four statements, one variable. Track the value of `c` **after** each line, not just what is printed. |
+| `~p` where `p = 5` | `p` is a *signed* `int`. Give the decimal value that will be printed, not the bit pattern. |
+| relational and logical | `a > b` prints as `%d`. What integer does a comparison actually evaluate to in C? |
+
+**Then build it, run it, and diff your prediction against the output.** Every
+line you got right, you understood. Every line you got wrong is something you
+believed about C that is not true — and finding those now, on a program that
+cannot hurt you, is enormously cheaper than finding them in Week 5 inside an
+interrupt handler.
+
+Bring your mismatches to the lab session. They are the point of the exercise;
+a perfect prediction with nothing to discuss is the least interesting outcome.
+
+> This is the first instance of a habit you will use all semester. It is Rule 3
+> of [BUGHUNT.md](../BUGHUNT.md): *predict, then run.* When the output matches
+> your prediction, you understood the system. When it does not, **that gap is
+> the bug** — and you found it by being surprised, not by scrolling.
+
+## **EXERCISE — Warm-up for the Bug Hunt**
+
+This is a two-minute version of what you will be doing for the rest of the
+semester. Do it before you open Bug Hunt #1.
+
+**Wiring.** `GP15` → 330 Ω resistor → LED anode; LED cathode → `GND`.
+We drive a real pin rather than the on-board LED because on the **Pico W the
+on-board LED is wired to the WiFi chip, not to the RP2040** — `PICO_DEFAULT_LED_PIN`
+does not exist on this board. A real pin is also one you can put a scope on,
+which will matter from Lab 2 onward.
+
+**Specification.** The [blinky code](blinky.c) blinks the LED at a rate set by
+the variable `a`:
+
+- `a` starts at **1 ms** and **doubles** on every iteration of the loop;
+- when `a` reaches 2048, it **resets to 1**;
+- within a single iteration the LED must be on and off for the **same** delay.
+
+So `a` should take the values **1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024**
+and then return to 1 — eleven delays per cycle, repeating forever. That
+sequence is what "working" means; if your fixed program prints anything else,
+it is not fixed yet.
+
+**There are three defects**, and the code compiles with all three in place. Two
+of them are in a single line. Read the specification above against the source
+and account for all three before you change anything — then fix them one at a
+time, checking the printed sequence after each change.
 
 > [!IMPORTANT]
-> Include a printf statement to monitor the variable "a". You might need to modify the CMake file to allow printf to work on the blink example. Refer to the CMake file in the Hello_World example for insights into this.
+> Add a `printf` so you can watch `a` — you cannot verify the sequence above by
+> looking at an LED. `stdio_init_all()` is already called for you, but you will
+> still need to modify the CMake file so that `printf` reaches your terminal.
+> Refer to the CMake file in the Hello_World example for insights into this.
+
+**A hint on method, once, and never again:** the compiler will warn about two of
+these three defects if you ask it to. `-Wall -Wextra` is not optional in this
+module, and it is the first row of the instrument table in
+[BUGHUNT.md](../BUGHUNT.md) for a reason.
 
 ---
 
@@ -277,6 +338,11 @@ This [blinky code](blinky.c) is supposed to blink an LED connected to the GPIO p
 
 Attached to this lab is the first of six **Bug Hunts**: a small piece of real
 firmware with defects already planted in it, and your job is to find them.
+
+The `blinky.c` exercise above was the warm-up — three defects in a dozen lines,
+with the specification handed to you. **This is the same exercise with the
+training wheels loosened**: more code, more defects, and a specification you
+have to hold in your head while you read. Do `blinky.c` first.
 
 You have been taught to *write* code. Almost nobody is taught to *debug* it — and
 in embedded work there is no operating system to catch your mistakes, no

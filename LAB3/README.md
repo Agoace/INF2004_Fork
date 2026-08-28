@@ -28,7 +28,7 @@ A hardware interrupt is an electronic signal that alerts the microprocessor of a
 
 In the previous lab session, polling was used to detect when a button was pressed. When polling is used, the microprocessor repeatedly checks whether the event has occurred. In the case of a button, the value of the GPIO pin is read to determine if it is high (unpressed) or low (pressed). Once the button is pressed, the microprocessor detects it quickly since it is always active and does nothing but check this single condition, as shown in Figure 1 (bottom). 
 
-While polling is a simple way to check for state changes, there's a cost. If the checking interval is shorter, there can be a long lag between occurrence and Detection, and you may fail to see the change entirely if the state changes back before you check. A shorter interval will get faster and more reliable Detection and consume more processing time and power since many more checks will return negative.
+While polling is a simple way to check for state changes, there's a cost, and the cost is a trade-off you have to choose a point on. If the checking interval is **longer**, there can be a long lag between the event occurring and your code detecting it, and you may fail to see the change entirely if the state changes back before you next check. If the interval is **shorter**, detection is faster and more reliable, but you consume more processing time and more power, because many more checks return negative. There is no interval that is good at both, which is the whole argument for interrupts.
 
 An alternative is configuring an interrupt on the button's GPIO pin so that an interrupt is generated when a pre-configured trigger condition is met. With this approach, the microprocessor can enter a low-power sleep state and be woken up with the interrupt. The Pico can detect signal changes (e.g. rising or falling edges) to generate an interrupt. If a GPIO pin is configured to be pulled up, a falling edge will occur when the button is pressed, pulling the pin to the ground. Interrupts are thus better suited to handle asynchronous events.
 
@@ -44,6 +44,48 @@ To test the code, you must connect the GP02 pin to 3.3V while observing the outp
 
 > [NOTE]
 > Switching to trigger at a low-level (GPIO_IRQ_LEVEL_LOW) could lead to the software crashing (not working). Why?
+
+### An aside worth having: what is `&gpio_callback`?
+
+Look closely at the call that arms the interrupt:
+
+```c
+gpio_set_irq_enabled_with_callback(2, GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
+```
+
+Three of those arguments are ordinary values — a pin number, a bitmask, a
+boolean. The fourth is a **pointer to a function**. You are not calling
+`gpio_callback` here; you are handing the SDK its *address* so that the SDK can
+call it later, at a moment neither you nor it can predict.
+
+That is a **callback**, and the type has a name:
+
+```c
+typedef void (*gpio_irq_callback_t)(uint gpio, uint32_t events);
+```
+
+Read it from the inside out: `gpio_irq_callback_t` is a pointer to a function
+taking a `uint` and a `uint32_t` and returning `void`. Any function with that
+exact signature can be stored in a variable of that type, passed as an argument,
+or put in an array — functions are data here, in a way they never were in your
+first C course.
+
+This matters for three reasons, and all three show up later in this module:
+
+1. **It is how a library calls your code.** The SDK was compiled long before
+   your program existed. It cannot contain a call to `gpio_callback`, because
+   that name did not exist yet. A pointer is the only way to close that gap, and
+   it is why every driver, RTOS and framework you will ever use is full of them.
+2. **The signature must match exactly.** A callback with the wrong parameter
+   list still compiles in some situations and then corrupts the stack when the
+   hardware calls it. Bug Hunt #6 has a defect of exactly this shape.
+3. **The compiler cannot see the call.** Nothing in your source calls
+   `gpio_callback`; the hardware does. That is precisely why the variables it
+   touches need `volatile` — a subject Bug Hunt #3, below, is entirely about.
+
+You do not have to write one this week. You do have to be able to say what the
+`&` is doing, because from here on the answer "it's a callback" stops being an
+acceptable end to the sentence.
 
 ## **IR-BASED WHEEL ENCODER**
 
@@ -101,7 +143,37 @@ The image below illustrates two different configurations for the periodic timer 
 
 ## **SAMPLE CODE FOR ULTRASONIC HC-SR04P**
 
-The following [example](https://github.com/KleistRobotics/Pico-Ultrasonic/blob/main/ultrasonic/ultrasonic.c) uses simple GPIO and delays to achieve the trigger and echo calculation to obtain the distance. However, this code is **incomplete** and might contain syntax errors. Moreover, it is **inefficient** due to the use of block-waiting, which can lead to unresponsive behavior (lines #26 & #28).
+[`ultrasonic.c`](ultrasonic.c) uses nothing but GPIO and delays to fire the
+trigger, time the echo, and convert that to a distance. It is adapted from
+[KleistRobotics/Pico-Ultrasonic](https://github.com/KleistRobotics/Pico-Ultrasonic),
+and it is the naive implementation on purpose — the same job done properly, with
+interrupts and timers, is what the rest of this lab is for.
+
+**Three defects are planted.** One stops it compiling; two let it compile and
+give you a plausible-looking wrong number, which is worse. Everything you need
+to find all three is in this README:
+
+- the compiler error does **not** point at the defective line. Read upward from
+  where it complains, exactly as you did in Bug Hunt #1;
+- the trigger sequence is spelled out in step 1 of *"How does the ultrasonic
+  HC-SR04P work"* above. Check the code against it, line by line;
+- so is the distance formula, including **why it is divided by two**. Check that
+  too.
+
+**Separately from the defects, this code has a design flaw**, and it is the more
+interesting problem. The two `while` loops inside `get_pulse_us()` are
+**block-waiting**: the processor sits and spins, doing nothing else, until the
+pin changes. Three questions to answer in your logbook:
+
+1. How long does the processor spend inside those loops for an object 2 m away?
+   (Work it out from the speed of sound; you do not need the sensor to answer.)
+2. What happens if the echo never arrives at all — the object is out of range,
+   or the sensor is unplugged? Trace the code and say precisely where it ends up.
+3. Your stopwatch from the exercise below has to keep counting while this
+   measurement is in progress. Can it? What would you change so that it can?
+
+Question 2 is the one that matters. **Fix the three defects, then answer it**,
+because "it hangs forever" is a defect a customer finds and you did not.
 
 > [NOTE]: HC-SR04P and HC-SR04+ both supports 3.3V microcontroller such as Pi Pico and ESP32. However, HC-SR04 is a 5V based sensor and can only be used on an Arduino Uno and **NOT** on a Pi Pico and ESP32.
 

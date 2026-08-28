@@ -1,3 +1,21 @@
+/*
+ * LAB 4 - L298N motor control by PWM.
+ * INF2004 LAB 4
+ *
+ * Wiring: PWM -> ENA (GP2),  N3 -> GP0,  N4 -> GP1
+ *
+ * READ THIS BEFORE YOU READ THE CODE.
+ *
+ * This is not reference code to copy. It is a WORKED EXAMPLE of what motor
+ * control code actually looks like in the wild: it compiles, it runs, the
+ * motor turns, and it has been shipped in this state by more than one
+ * person. TWO things in setup_pwm() are wrong, and both of them are
+ * arithmetic - the same two classes of defect that Bug Hunt #4 is about.
+ *
+ * The README section for this file tells you how to find them with an
+ * oscilloscope rather than by staring. Measure first, then explain, then fix.
+ */
+
 #include "pico/stdlib.h"
 #include "hardware/pwm.h"
 
@@ -36,7 +54,7 @@ int main() {
     gpio_set_dir(DIR_PIN1, GPIO_OUT);
     gpio_set_dir(DIR_PIN2, GPIO_OUT);
 
-    // Set up PWM on GPIO0
+    // Set up PWM on GP2
     setup_pwm(PWM_PIN, 100.0f, 0.5f);  // 100 Hz frequency, 50% duty cycle
 
     // Control motor direction
