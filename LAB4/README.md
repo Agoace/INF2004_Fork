@@ -40,13 +40,17 @@ The RP2040 PWM block has eight identical slices, where each slice can drive two 
 
 **How PWM Slices Work:**
 
-1. **Initialization:** Before using PWM, initialize the PWM system using the `pwm_init()` function. This initializes all PWM slices and channels.
+1. **Initialization:** `pwm_init(slice_num, &config, start)` initialises **one slice** — the one you name — from a configuration struct. There is no call that initialises all of them at once; each slice you use, you set up.
 2. **Configuring Channels:** You configure the GPIO pins for PWM operation by setting their functions to `GPIO_FUNC_PWM` using `gpio_set_function()`. This allocates the pins to specific PWM channels.
-3. **Frequency Setup:** You set the desired PWM frequency using the `pwm_set_wrap()` function. This determines how fast the PWM signal oscillates between high and low.
-4. **Duty Cycle:** To control the duty cycle, you use the `pwm_set_chan_level()` function to specify when the signal transitions between high and low within each PWM cycle.
+3. **Frequency Setup:** The output frequency is set by **two** values together, not one:
+
+   $$f_{\text{PWM}} = \frac{f_{\text{sys}}}{\text{clkdiv} \times (\text{wrap} + 1)}$$
+
+   `pwm_set_clkdiv()` divides the 125 MHz system clock; `pwm_set_wrap()` sets how far the slice counts before rolling over. Changing either one changes the frequency, and you cannot reach an arbitrary frequency by touching only `wrap`. **Note the `+ 1`: the counter runs from 0 to `wrap` inclusive, so a wrap of 12499 gives 12500 counts, not 12499.** Off-by-one here is a defect you will meet again in Bug Hunt #4.
+4. **Duty Cycle:** To control the duty cycle, you use the `pwm_set_chan_level()` function to specify when the signal transitions between high and low within each PWM cycle. The level is compared against the same counter, so **duty = level / (wrap + 1)** — the duty cycle depends on `wrap`, and changing the frequency changes the duty cycle unless you recompute the level.
 5. **Enabling PWM:** Once you've configured the PWM slices and channels, you enable the PWM signal using `pwm_set_enabled()`.
-7. **Updating Parameters:** If needed, you can update the PWM parameters, such as frequency or duty cycle, at runtime to modify the PWM signal.
-8. **Disabling PWM:** When you're done with PWM, disable it using `pwm_set_enabled()`.
+6. **Updating Parameters:** If needed, you can update the PWM parameters, such as frequency or duty cycle, at runtime to modify the PWM signal.
+7. **Disabling PWM:** When you're done with PWM, disable it using `pwm_set_enabled()`.
 
 The following code [hello_pwm](https://github.com/raspberrypi/pico-examples/blob/master/pwm/hello_pwm/hello_pwm.c) illustrates a simple example of how a PWM can be configured on the Raspberry Pi Pico. You could connect GP0 and GP1 to an oscilloscope to observe the signal. Alternatively, you may observe the effects of PWM on the motor controller by connecting, as described in the next section.
 
@@ -75,23 +79,53 @@ Again, we can use the [hello_pwm](https://github.com/raspberrypi/pico-examples/b
 An alternative image of connecting them can be seen [here](/img/motorconnection.jpg).
 
 The following changes are required:
-1. change line #16: `gpio_set_function(0, GPIO_FUNC_PWM);` --> `gpio_set_function(2, GPIO_FUNC_PWM);`
-1. include this in line #21: `pwm_set_clkdiv(slice_num, 100);`
-2. change line #23: `pwm_set_wrap(slice_num, 3);` --> `pwm_set_wrap(slice_num, 12500);`
-3. change line #25: `pwm_set_chan_level(slice_num, PWM_CHAN_A, 1);` --> `pwm_set_chan_level(slice_num, PWM_CHAN_A, 12500/2);`  
-4. comment off line #27: `pwm_set_chan_level(slice_num, PWM_CHAN_B, 3);` --> `\\pwm_set_chan_level(slice_num, PWM_CHAN_B, 3);`
+1. change `gpio_set_function(0, GPIO_FUNC_PWM);` --> `gpio_set_function(2, GPIO_FUNC_PWM);`
+2. add `pwm_set_clkdiv(slice_num, 100);` before the wrap is set
+3. change `pwm_set_wrap(slice_num, 3);` --> `pwm_set_wrap(slice_num, 12500);`
+4. change `pwm_set_chan_level(slice_num, PWM_CHAN_A, 1);` --> `pwm_set_chan_level(slice_num, PWM_CHAN_A, 12500/2);`
+5. comment out the channel B line: `pwm_set_chan_level(slice_num, PWM_CHAN_B, 3);` --> `//pwm_set_chan_level(slice_num, PWM_CHAN_B, 3);`
 
-This modified code snippet configures the Raspberry Pi Pico to generate PWM (Pulse Width Modulation) signals on GP2 via the gpio_set_function function. It then obtains the PWM slice number associated with GP0 and sets the clock divisor to 100, reducing the main clock from 125Mhz to 1.25Mhz frequency. The pwm_set_wrap function sets the PWM wrap value, essentially determining the period of the PWM signal. Here, it's set to 12500, which corresponds to a period of 10ms. This is obtained as follows: ```((1 / 1.25Mhz)*12500) ```. pwm_set_chan_level sets the duty cycle of the PWM signal on channel A of the specified PWM slice to 50% (12500/2). Finally, pwm_set_enabled enables the PWM output on the specified slice. In summary, this code initializes PWM on GP2 with a 100Hz frequency and a 50% duty cycle, effectively generating a square wave output.
+> [!NOTE]
+> A C comment is `//`, not `\\`. Line numbers in the upstream example move whenever it is updated, so the changes above name the *code* rather than the line.
+
+This modified code snippet configures the Raspberry Pi Pico to generate PWM (Pulse Width Modulation) signals on GP2 via the gpio_set_function function. It then obtains the PWM slice number associated with GP2 and sets the clock divisor to 100, reducing the main clock from 125Mhz to 1.25Mhz frequency. The pwm_set_wrap function sets the PWM wrap value, essentially determining the period of the PWM signal. Here, it's set to 12500, which corresponds to a period of 10ms. This is obtained as follows: ```((1 / 1.25Mhz)*12500) ```. pwm_set_chan_level sets the duty cycle of the PWM signal on channel A of the specified PWM slice to 50% (12500/2). Finally, pwm_set_enabled enables the PWM output on the specified slice. In summary, this code initializes PWM on GP2 with a 100Hz frequency and a 50% duty cycle, effectively generating a square wave output.
 
 The L298N motor controller's N3 and N4 pins control the motor's turning direction. In this example, we connect N3 to GP0 and N4 to GP1. By setting GP0 and GP1 to different combinations of High and Low, the motor can be controlled to rotate clockwise, counterclockwise, or stop. For example:
 
 - Setting GP0 High and GP1 Low will rotate the motor clockwise.
 - Setting GP0 Low and GP1 High will rotate the motor counterclockwise.
-- Setting both GP0 and GP1 either High or Low will stop the motor."
+- Setting both GP0 and GP1 either High or Low will stop the motor.
 
 ## **UNDERSTANDING THE L298N MOTOR CONTROLLER - pwm_set_gpio_level example**
 
-The provided alternative C [code](https://github.com/sirfonzie/INF2004_LAB4/blob/main/l298n.c) demonstrates how to configure a Raspberry Pi Pico to use Pulse Width Modulation (PWM) on GP2 and control motor direction using an L298N motor driver via GP0 and GP1. Let's break down the essence of each part of the PWM-related functions and other elements in the [code](https://github.com/sirfonzie/INF2004_LAB4/blob/main/l298n.c).
+The alternative C [code](l298n.c) configures the Pico to use Pulse Width Modulation on GP2 and control motor direction using an L298N motor driver via GP0 and GP1.
+
+> [!IMPORTANT]
+> **This code is a worked example, not reference code to copy.**
+>
+> It compiles. It runs. The motor turns, and turns at what looks like the right
+> speed. **Two things inside `setup_pwm()` are wrong, and both are arithmetic** —
+> the same two classes of defect Bug Hunt #4 is built around. Code in exactly
+> this state has been shipped by more than one person, which is the point of
+> showing it to you.
+>
+> Find them by **measuring**, not by staring:
+>
+> 1. Ask for **100 Hz**. Put a scope on GP2 and measure the actual frequency.
+>    Write down both numbers before you look for a cause.
+> 2. Ask for **100% duty** — change the call to `setup_pwm(PWM_PIN, 100.0f, 1.0f)`.
+>    Measure the pin. What did you get, and is it anywhere near what you asked
+>    for?
+> 3. Ask for **5 Hz**. Work out what `divider` holds, then check it against the
+>    hardware limit for the clock divider in the RP2040 datasheet.
+>
+> Then explain each one in a sentence beginning *"the type is…"*, and only then
+> fix them. A fix you cannot explain is not a fix — see
+> [BUGHUNT.md](../BUGHUNT.md), rule 4.
+
+The breakdown below describes what each line is **intended** to do. Read it
+against the code rather than as a description of the code, because in two
+places the intention and the behaviour are not the same thing.
 
 ### Key PWM-related Code Snippets Explained:
 
@@ -116,7 +150,9 @@ The provided alternative C [code](https://github.com/sirfonzie/INF2004_LAB4/blob
      uint32_t divider = clock_freq / (freq * 65536);  // Compute clock divider
      pwm_set_clkdiv(slice_num, divider);
      ```
-     The Raspberry Pi Pico operates with a clock frequency of 125 MHz. The divider is calculated based on the target frequency (`freq`) and the resolution (16 bits, or 65536 steps for PWM), ensuring the PWM frequency is set to the desired value.
+     The intent is that the divider is calculated from the target frequency (`freq`) and the resolution (16 bits, or 65536 steps), so that the PWM frequency comes out as asked.
+
+     Work the arithmetic yourself for `freq = 100.0f`. What is `125000000.0f / (100.0f * 65536)` as a real number, and what is stored in `divider`? `pwm_set_clkdiv()` takes a **`float`**. What does declaring `divider` as `uint32_t` cost you, and what frequency does the pin actually carry?
 
    - **Set the PWM wrap value:**
      ```c
@@ -128,7 +164,9 @@ The provided alternative C [code](https://github.com/sirfonzie/INF2004_LAB4/blob
      ```c
      pwm_set_gpio_level(gpio, (uint16_t)(duty_cycle * 65536));
      ```
-     The `pwm_set_gpio_level` function sets the output level for the given GPIO pin based on the duty cycle. A duty cycle of 50% corresponds to setting the output level to half the wrap value, ensuring the PWM signal is high 50% of the time.
+     The `pwm_set_gpio_level` function sets the output level for the given GPIO pin. The intent is that a duty cycle of 0.5 gives a level of half the wrap value, so the signal is high half the time — and for 0.5 that is what happens.
+
+     Now do the same arithmetic for `duty_cycle = 1.0f`. What is `1.0f * 65536`, and what happens to that value when it is cast to `uint16_t`? Ask for 100% duty and say, before you measure, what the motor will do.
 
    - **Enable the PWM:**
      ```c
@@ -194,7 +232,8 @@ The code you provided deals with the ADC (Analog-to-Digital Converter) functiona
    ```c
    adc_select_input(c - '0');
    ```
-   - This section allows you to select an ADC channel based on user input. The code converts the ASCII value of the input (`c`) into a number (`c - '0'`) to select the corresponding ADC input channel (0–7).
+   - This section allows you to select an ADC channel based on user input. The code converts the ASCII character typed by the user into a number by subtracting `'0'` — `'3'` is 0x33 and `'0'` is 0x30, so `c - '0'` gives 3. That is character arithmetic, and it is only valid for the digits `'0'` to `'9'`; anything else produces a channel number that was never checked.
+   - **The RP2040 has five ADC inputs, not eight:** channels 0–3 are GP26, GP27, GP28 and GP29, and channel 4 is the internal temperature sensor. There is no channel 5, 6 or 7. Typing `c7` selects nothing useful and reports no error, which is worth remembering the next time an input from outside your program is used without being validated.
    - The function `adc_select_input()` configures the ADC to sample from the specified input channel.
 
 ### 4. **Single ADC Sample (`adc_read()`)**
@@ -246,13 +285,13 @@ The code you provided deals with the ADC (Analog-to-Digital Converter) functiona
 
 ### 7. **User Commands for ADC:**
    - The program provides a simple console-based interface to interact with the ADC. The relevant commands for the ADC are:
-     - **`c[n]`**: Switch ADC input to channel `n` (0–7).
+     - **`c[n]`**: Switch ADC input to channel `n` (0–4: GP26–GP29 and the temperature sensor).
      - **`s`**: Sample the ADC once and display the result.
      - **`S`**: Capture multiple samples (as defined by `N_SAMPLES`) and print the results.
 
 ### Summary:
 - **Initialization**: The ADC is initialized, and the temperature sensor is enabled.
-- **Channel Selection**: The user can select an ADC input channel (0–7).
+- **Channel Selection**: The user can select an ADC input channel (0–4).
 - **Single Sample**: The code reads a single ADC sample, converts it to voltage, and prints it.
 - **Multiple Samples**: The code can capture multiple ADC samples and print them after storing them in a buffer.
 - **FIFO Management**: FIFO is used to handle the multiple samples, with functions to start, stop, and clear the FIFO as needed.
@@ -270,9 +309,45 @@ Again, we can re-use the adc_console code to demonstrate how ADC can be used to 
 
 ## **EXERCISE**
 
-To configure a PWM signal at 20 Hz with a 50% duty cycle on GP0 and feed it into an ADC at GP26 while sampling the ADC every 25 ms, you must use the Raspberry Pi Pico and its Pico C SDK. You will need to use a jumper wire to connect GP0 to GP26. You may use a timer interrupt. The output to look as follows:
+Configure a PWM signal at **20 Hz with a 50% duty cycle on GP0**, feed it into the **ADC on GP26**, and sample it with a **timer interrupt**. You will need a jumper wire from GP0 to GP26. The output should look as follows:
 
 <img src="/img/ex4.png" width=100% height=100%>
+
+### Then: sample it twice, and explain the difference
+
+Build it **twice**, changing nothing but the sampling period, and record the
+reconstructed waveform each time.
+
+| Step | Sample every | Sample rate | What to record |
+|---|---|---|---|
+| 1 | **25 ms** | 40 Hz | Run it several times, and press reset between runs. Does the recovered waveform look the same on every run? |
+| 2 | **5 ms** | 200 Hz | Same signal, same code, faster sampling. |
+| 3 | — | — | Explain the difference. |
+
+Step 1 is not an arbitrary number. Your signal has a fundamental of 20 Hz, and
+sampling every 25 ms is **exactly 40 Hz — precisely twice the fundamental**,
+which is the Nyquist rate and not one hertz above it. Two things follow, and you
+should be able to see both:
+
+- At exactly 2× you are sampling the same two points of every cycle, so **what
+  you recover depends on the phase you happened to start at**. Reset the board
+  and it can come back looking different. Nothing in your code changed.
+- A square wave is not a 20 Hz sine. It is 20 Hz *plus* harmonics at 60 Hz,
+  100 Hz, 140 Hz and upward, and every one of those is above your 20 Hz Nyquist
+  limit. They do not vanish — they **fold back down** into your samples as
+  frequencies that were never in the signal.
+
+Write down, in your logbook: at 25 ms, which parts of what you measured were the
+signal, and which were artefacts of how you looked at it? This is not a trick
+question with a tidy answer; the honest answer is *"at this sample rate I cannot
+tell"*, and being able to say that about your own data is the point.
+
+> **Why this matters next week.** Lab 5 asks you to filter a noisy sensor. A
+> filter cannot remove aliased noise, because by the time you have sampled it,
+> the noise is indistinguishable from real signal at the same frequency. It has
+> to be dealt with *before* the ADC, or by sampling fast enough that it never
+> folds. **Sample rate is a design decision, not a detail**, and this is the
+> cheapest place in the module to learn that.
 
 ---
 
