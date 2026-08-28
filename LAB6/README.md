@@ -27,19 +27,21 @@ We discussed the various techniques that can be deployed to improve execution pe
 
 The following is a simple code example in C for measuring and comparing execution times before and after optimization using the `pico_time.h` library on the Raspberry Pi Pico. In this example, we have a simple `timeConsumingTask()` function simulating a computationally intensive task that we would like to measure the execution time before and after optimization and then compare the results to determine the effectiveness of the optimizations. You can apply your specific optimizations within the code and observe their impact on execution time.
 
-> [NOTE]
-> Some newer compilers can perform optimisation automatically (without our consent!). Thus, sometimes you don't see a difference before and after because of this.
-
 ```c
 #include <stdio.h>
+#include <inttypes.h>
 #include "pico/stdlib.h"
 #include "pico/time.h"
+
+// Volatile, so the compiler is not allowed to assume the result is unused.
+// See the note below on dead-code elimination - without this, there is
+// nothing here to measure.
+static volatile uint32_t sink;
 
 // Function to perform a time-consuming task
 void timeConsumingTask() {
     for (int i = 0; i < 1000000; i++) {
-        // Simulate some computation
-        int result = i * 2;
+        sink = i * 2;
     }
 }
 
@@ -52,22 +54,23 @@ int main() {
     timeConsumingTask();
     absolute_time_t end_time = get_absolute_time();
 
-    uint32_t execution_time_before = absolute_time_diff_us(start_time, end_time);
+    // absolute_time_diff_us() returns int64_t. Store it in one, and print
+    // it with PRId64 - see the note below on why this matters here of all
+    // places.
+    int64_t execution_time_before = absolute_time_diff_us(start_time, end_time);
 
-    // Output execution time before optimization
-    printf("Execution Time Before Optimization: %d microseconds\n", execution_time_before);
+    printf("Execution Time Before Optimization: %" PRId64 " microseconds\n",
+           execution_time_before);
 
-    // Apply optimizations (you can add your optimizations here)
-
-    // Measure execution time after optimization
+    // Apply your optimizations, then measure again
     start_time = get_absolute_time();
     timeConsumingTask();
     end_time = get_absolute_time();
 
-    uint32_t execution_time_after = absolute_time_diff_us(start_time, end_time);
+    int64_t execution_time_after = absolute_time_diff_us(start_time, end_time);
 
-    // Output execution time after optimization
-    printf("Execution Time After Optimization: %d microseconds\n", execution_time_after);
+    printf("Execution Time After Optimization: %" PRId64 " microseconds\n",
+           execution_time_after);
 
     // Compare execution times
     if (execution_time_after < execution_time_before) {
@@ -79,6 +82,18 @@ int main() {
     return 0;
 }
 ```
+
+> [!IMPORTANT]
+> **Two things in the code above are there deliberately, and both were wrong in the version this lab used to ship.** They are worth more than the example itself.
+>
+> **1. The measurement was truncated and then printed with the wrong conversion.** `absolute_time_diff_us()` returns an **`int64_t`**. The old version assigned it to a `uint32_t` — which silently discards the top 32 bits — and then printed it with `%d`, which is for `int`. Passing a value of one type where a variadic function expects another is undefined behaviour, not a formatting preference. This is the same defect planted in Bug Hunt #4 and present in [`pid.c`](pid.c). **In the lab about debugging, in the code you are asked to measure with.** Use `int64_t` and `PRId64` from `<inttypes.h>`, which is correct on every platform.
+>
+> **2. The task's result was never used, so the compiler deleted the whole loop.** The old version computed `int result = i * 2;` and then did nothing with `result`. Nothing observable depends on it, so under the "as-if" rule the compiler is entitled to remove the assignment; with the body empty, the loop itself becomes removable; and the call to an empty function is removable too. The mechanism has a name — **dead-code elimination** — and at `-O2` it will reduce the entire benchmark to nothing, so both measurements come back as a couple of microseconds of function-call overhead and the comparison is meaningless.
+>
+> The `volatile` on `sink` is what stops it. `volatile` tells the compiler that a write may have effects it cannot see, so the write must actually happen and the loop must actually run.
+>
+> **Remember this for Bug Hunt #6.** One of its twelve defects is a calibration delay written as an empty `for` loop, deleted by exactly this mechanism, on a part whose datasheet requires that delay. The compiler did not break the code — it read the code, proved the loop had no effect, and acted on the proof.
+
 **Reducing Clock Speed for Lower Power**
 
 Power optimization through clock speed reduction is common in embedded systems, including those based on the Raspberry Pi Pico or similar microcontrollers. The idea is to lower the clock frequency of the microcontroller to reduce power consumption while still meeting the application's performance requirements. 
@@ -179,9 +194,25 @@ In the Run & Debug tool, click the Pico Debug button (the one with the green tri
 ![Screenshot of Pull-up Pressed](debugging.png)
 
 
-## **EXERCISE**
+## **EXERCISE 1 — Optimisation, with numbers**
 
-Here's a pseudo-code representation of the given C code for a PID controller. Find and correct all the logical and syntax errors in the following [code](https://github.com/sirfonzie/INF2004_LAB6/blob/main/pid.c). There are **at least** 5 logical and 5 syntax errors.
+Four functions that are slower than they need to be, a correctness harness that
+will not let you trade the right answer for a fast one, and a measurement
+harness that runs on the actual RP2040. You write the fast versions; you report
+microseconds before and after at three optimisation levels, the mechanism in
+each case, and one disassembly extract that proves it.
+
+Two of the four exist because the Cortex-M0+ has **no floating-point unit and
+no divide instruction** — facts that are not true of the laptop you have been
+testing on all semester. And you build at three optimisation levels, because
+part of the answer is finding out how much of your cleverness the compiler was
+already doing without being asked.
+
+> **Start here:** [`optimise/`](optimise/)
+
+## **EXERCISE 2 — Debugging**
+
+Here's a pseudo-code representation of the given C code for a PID controller. Find and correct all the logical and syntax errors in [`pid.c`](pid.c). There are **at least** 5 logical and 5 syntax errors.
 This pseudo-code provides a high-level description of the PID control algorithm and the simulation loop. It outlines the key steps and calculations the code performs without getting into specific programming language syntax.
 
 ```c
