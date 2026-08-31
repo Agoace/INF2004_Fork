@@ -257,7 +257,7 @@ If you encounter a 'build not found' error, ensure that the Pico SDK is correctl
 
 ## **THE BIG PICTURE**
 The figure below illustrates the entire procedure.
-<img width="1946" height="1071" alt="image" src="/img/overview.png" />
+![Built Overview](/img/overview.png.png)
 
 
 ## **TASK — Predict, then run**
