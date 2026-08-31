@@ -105,6 +105,18 @@ Once the Pico SDK is installed, follow these steps to compile and flash your fil
    mkdir build
    cd build
    ```
+   
+### 🛑 Common Pitfall: "Terminal Amnesia"
+
+Think of a terminal window like a short-term sticky note. When you run the `export PICO_SDK_PATH=...` command, you are only teaching *that specific window* where the Pico SDK lives. 
+
+If you close that window, open a new tab, or switch to the built-in terminal inside VS Code, the new window has complete amnesia. It has no idea where the SDK is, and your `cmake` command will instantly fail. You must run the `export` command again for every new window you open (unless you save it permanently to your shell profile).
+
+**How to verify your terminal remembers:** Before you run `cmake`, you can test if your current window knows the path by asking it to print the variable. Run this command:
+
+```bash
+echo $PICO_SDK_PATH
+
 5. **Generate build files and compile:**
    ```bash
    cmake -DPICO_BOARD=pico_w ..
