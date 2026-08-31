@@ -116,6 +116,7 @@ If you close that window, open a new tab, or switch to the built-in terminal ins
 
 ```bash
 echo $PICO_SDK_PATH
+```
 
 5. **Generate build files and compile:**
    ```bash
