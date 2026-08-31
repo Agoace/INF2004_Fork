@@ -108,7 +108,7 @@ Once the Pico SDK is installed, follow these steps to compile and flash your fil
 5. **Generate build files and compile:**
    ```bash
    cmake -DPICO_BOARD=pico_w ..
-   make
+   make -j8
    ```
 6. **Flash your compiled file to the Pico W:**
    ```bash
