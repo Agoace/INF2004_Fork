@@ -1,5 +1,7 @@
 # INF2004 Lab Repository
 
+> **New computer?** Follow [`SETUP.md`](./SETUP.md) for a reproducible Pico W command-line environment, USB flashing, and serial monitoring.
+
 This repository contains all the labs for the INF2004 module, consolidated into a single workspace. Each lab is placed into its respective sub-folder and covers different aspects of embedded systems and microcontroller programming using the Raspberry Pi Pico.
 
 ## Table of Contents
