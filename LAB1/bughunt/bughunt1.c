@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef PICO_ON_DEVICE
 #include "pico/stdlib.h"
@@ -25,9 +26,9 @@
  * 1. Count how many bits are set in a value.
  *    count_bits(0xFF) must be 8.  count_bits(-1) must be 32.
  * ------------------------------------------------------------------ */
-uint8_t count_bits(int value)
+uint8_t count_bits(uint32_t value)
 {
-    uint8_t count = 0
+    uint8_t count = 0;
 
     while (value) {
         count += value & 1;
@@ -46,6 +47,7 @@ bool even_parity(uint32_t value)
 
     if (bits % 2 == 0) {
         return true;
+    }
     else {
         return false;
     }
@@ -58,7 +60,7 @@ bool even_parity(uint32_t value)
  * ------------------------------------------------------------------ */
 bool pin_is_clear(uint32_t mask, unsigned pin)
 {
-    return (mask & 1u << pin == 0);
+    return ((mask & (1u << pin)) == 0);
 }
 
 /* ------------------------------------------------------------------
@@ -69,7 +71,7 @@ uint32_t reverse_bits(uint32_t v)
 {
     uint32_t r = 0;
 
-    for (int i = 0; i <= 32; i++)
+    for (int i = 0; i < 32; i++)
         r |= ((v >> i) & 1) << (31 - i);
 
     return r;
